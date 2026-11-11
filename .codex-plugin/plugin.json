@@ -1,0 +1,10 @@
+{
+  "name": "skillscout",
+  "version": "0.1.0",
+  "description": "Discover, compare, inspect and approve agent skills.",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SkillScout",
+    "shortDescription": "Discover and inspect skills before installing"
+  }
+}

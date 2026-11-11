@@ -1,0 +1,13 @@
+{
+  "name": "skillscout",
+  "owner": {
+    "name": "stormragemc"
+  },
+  "plugins": [
+    {
+      "name": "skillscout",
+      "source": "./",
+      "description": "Discover and inspect agent skills."
+    }
+  ]
+}

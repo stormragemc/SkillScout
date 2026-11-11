@@ -1,0 +1,4 @@
+interface:
+  display_name: "SkillScout"
+  short_description: "Discover, compare and inspect skills before installing."
+  default_prompt: "Use $skillscout to find useful coding and design skills, compare my accessible setup, and prepare inspected recommendations for my approval."

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "skillscout",
+  "version": "0.1.0",
+  "description": "Discover useful skills, compare your setup, and inspect before installing.",
+  "author": {
+    "name": "stormragemc",
+    "url": "https://github.com/stormragemc"
+  },
+  "repository": "https://github.com/stormragemc/SkillScout",
+  "license": "MIT"
+}

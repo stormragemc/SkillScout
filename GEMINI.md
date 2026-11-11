@@ -1,0 +1,1 @@
+Use skills/skillscout/SKILL.md for discovery and inspection tasks. The shared runtime enforces version-bound approval. Loading this extension enables no accounts, schedules or models. Gemini is a secondary adapter requiring a live-host installation check.
