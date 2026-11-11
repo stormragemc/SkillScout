@@ -81,3 +81,22 @@ class InstallationTests(unittest.TestCase):
         (Path(p["destination"]) / "CUSTOM.md").write_text("Keep")
         with self.assertRaises(ScoutError):
             rollback(self.store, p["id"])
+
+
+    def test_approved_work_export(self):
+        import zipfile
+        from skillscout.proposals import export_work
+        self.config["delivery"] = "work"
+        p = self.approved()
+        output = self.base / "approved.zip"
+        result = export_work(self.store, self.config, p["id"], output)
+        self.assertFalse(result["installed"])
+        with zipfile.ZipFile(output) as archive:
+            self.assertIn("sample-skill/SKILL.md", archive.namelist())
+        self.assertFalse((self.base / "installed").exists())
+
+    def test_work_delivery_cannot_claim_local_install(self):
+        self.config["delivery"] = "work"
+        p = self.approved()
+        with self.assertRaises(ScoutError):
+            install(self.store, self.config, p["id"])

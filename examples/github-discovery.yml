@@ -1,0 +1,29 @@
+# Copy into your own controlled repository after reviewing report visibility.
+# Public GitHub discovery only. Do not upload browser sessions or private inventory.
+name: SkillScout discovery
+on:
+  workflow_dispatch:
+  # Enable your chosen schedule explicitly:
+  # schedule:
+  #   - cron: '15 1 * * *'
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install git+https://github.com/stormragemc/SkillScout.git
+      - run: |
+          skillscout init
+          skillscout discover --source github --limit 10
+        env:
+          SKILLSCOUT_HOME: ${{ runner.temp }}/skillscout
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-discovery-report
+          path: ${{ runner.temp }}/skillscout/reports/
+          retention-days: 7
