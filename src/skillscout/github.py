@@ -154,14 +154,18 @@ def discover(store: Store, config: dict, limit: int = 10, client: GitHub | None 
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).date().isoformat()
     queries = ["topic:agent-skills archived:false", '"agent skills" in:readme archived:false',
                f"topic:claude-code created:>={cutoff} archived:false"]
-    candidates, incomplete = {}, []
+    candidates, incomplete, lanes = {}, [], []
     for query in queries:
         result = client.request("/search/repositories?" + urllib.parse.urlencode(
             {"q": query, "sort": "updated" if "created:" in query else "stars", "per_page": limit}))
         if result.get("incomplete_results"):
             incomplete.append(query)
-        for item in result.get("items", []):
-            candidates[item["id"]] = item
+        lanes.append(result.get("items", []))
+    for index in range(limit):
+        for lane in lanes:
+            if index < len(lane):
+                item = lane[index]
+                candidates[item["id"]] = item
     rows = []
     for meta in list(candidates.values())[:limit]:
         repo = repository(meta["full_name"])
@@ -175,6 +179,11 @@ def discover(store: Store, config: dict, limit: int = 10, client: GitHub | None 
            "trending": lambda r: r["ranking"]["components"].get("momentum", -1),
            "best-match": lambda r: r["ranking"]["score"]}[mode]
     rows.sort(key=key, reverse=True)
+    from .inventory import assess, collect
+    existing = collect(config)
+    for row in rows:
+        row["setup_comparison"] = assess({"name": row["repository"], "description": row["description"],
+                                          "estimated_tokens": 0}, existing)
     report = {"id": "github-" + digest([now(), rows])[:16], "at": now(), "source": "github",
               "candidates": rows, "search_incomplete": incomplete,
               "coverage": "Configured queries and bounded results; not all of GitHub"}

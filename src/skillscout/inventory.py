@@ -5,7 +5,7 @@ import math
 from collections import Counter
 from pathlib import Path
 
-from .core import ScoutError, Store, clean, digest, skill_metadata
+from .core import ScoutError, clean, digest, skill_metadata
 from .github import tokens
 
 
@@ -37,7 +37,7 @@ def collect(config: dict) -> dict:
         text = path.read_text(encoding="utf-8")
         entries.append({"name": path.name, "description": clean(text, 4000), "hash": digest(text),
                         "kind": "rules", "path": str(path), "estimated_tokens": (len(text) + 3) // 4})
-    return {"entries": entries, "warnings": warnings, "fingerprint": digest([entries, warnings]),
+    return {"entries": entries, "warnings": warnings, "fingerprint": digest([entries, warnings, config.get("interests", [])]),
             "scope": "Explicit roots and rules files only; unexposed chat memories are unknown"}
 
 
