@@ -13,6 +13,7 @@ DEFAULTS = {
     "interests": ["coding", "design"],
     "creators": CREATORS,
     "target": "codex",
+    "instagram_enabled": False,
     "inventory_roots": [],
     "rules_files": [],
     "schedules": [],
