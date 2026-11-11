@@ -14,6 +14,8 @@ def analyze(store, path, source, creator=None, transcript=None, frames=False, au
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 100_000_000:
         raise ScoutError("Provide a local non-linked media file under 100 MB")
     path = path.resolve()
+    if path.suffix.lower() not in {".mp4", ".m4v", ".mov", ".webm", ".mkv", ".avi"}:
+        raise ScoutError("Use a supported video container; playlists and manifests are not accepted")
     source = reel_identity(source)
     media_hash = hashlib.sha256(path.read_bytes()).hexdigest()
     mid = digest([source, media_hash])[:24]
@@ -34,6 +36,7 @@ def analyze(store, path, source, creator=None, transcript=None, frames=False, au
             evidence["limitations"].append("ffmpeg unavailable; no frames extracted")
         else:
             rc, _ = command([binary, "-nostdin", "-v", "error", "-threads", "1", "-protocol_whitelist", "file",
+                             "-format_whitelist", "mov,matroska,webm,avi",
                              "-i", str(path), "-t", "60", "-vf", "fps=1/5,scale=640:-2", "-frames:v", "12",
                              "-y", str(output / "frame-%02d.jpg")], timeout=60)
             evidence["frames"] = [str(p) for p in sorted(output.glob("frame-*.jpg"))]

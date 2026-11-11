@@ -31,7 +31,7 @@ def subject(store, p):
 def fingerprint(p):
     return digest({k: p[k] for k in (
         "source_id", "revision", "source_hash", "skill_path", "content_hash", "metadata",
-        "license_files", "security", "assessment", "target", "delivery", "destination", "previous_hash")})
+        "license_files", "security", "assessment", "target", "delivery", "destination", "previous_hash", "previous_record")})
 
 
 def prepare(store, config, repo, skill=None, revision=None):
@@ -77,6 +77,8 @@ def prepare(store, config, repo, skill=None, revision=None):
              assessment=assess(metadata, collect(config)), target=target, delivery=delivery,
              destination=str(destination) if destination else "ChatGPT Work supported skill installer",
              previous_hash=tree_hash(destination) if destination and destination.exists() else None,
+             previous_record=store.load("installed", metadata["name"])
+                 if store.path("installed", metadata["name"]).exists() else None,
              status="pending_review")
     p["fingerprint"] = fingerprint(p)
     store.save("proposals", pid, p)
@@ -210,7 +212,10 @@ def rollback(store, pid):
                 raise
         p.update(status="rolled_back", rolled_back_at=now())
         store.save("proposals", pid, p)
-        store.path("installed", p["metadata"]["name"]).unlink(missing_ok=True)
+        if p.get("previous_record"):
+            store.save("installed", p["metadata"]["name"], p["previous_record"])
+        else:
+            store.path("installed", p["metadata"]["name"]).unlink(missing_ok=True)
         return p
 
 

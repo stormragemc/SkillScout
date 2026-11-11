@@ -100,3 +100,27 @@ class InstallationTests(unittest.TestCase):
         p = self.approved()
         with self.assertRaises(ScoutError):
             install(self.store, self.config, p["id"])
+
+
+    def test_update_rollback_restores_files_and_tracking(self):
+        import shutil
+        old = self.approved()
+        install(self.store, self.config, old["id"])
+        destination = Path(old["destination"])
+        old_hash = tree_hash(destination)
+        new_root = self.store.root / "quarantine" / "fixture-two"
+        shutil.copytree(self.root, new_root)
+        manifest = new_root / "skills/sample-skill/SKILL.md"
+        manifest.write_text(manifest.read_text() + "Also explain generators.\n")
+        source = {"id": "fixture-two", "path": str(new_root), "repository": "owner/repo",
+                  "revision": "b" * 40, "content_hash": tree_hash(new_root)}
+        with patch("skillscout.proposals.snapshot", return_value=source):
+            new = prepare(self.store, self.config, "owner/repo")
+        new = review(self.store, self.config, new["id"], "update", "Adds useful generator examples.",
+                     "Compared old instructions with new generator guidance; runtime not tested.")
+        approve(self.store, self.config, new["id"], new["fingerprint"])
+        install(self.store, self.config, new["id"])
+        self.assertNotEqual(tree_hash(destination), old_hash)
+        rollback(self.store, new["id"])
+        self.assertEqual(tree_hash(destination), old_hash)
+        self.assertEqual(self.store.load("installed", "sample-skill")["revision"], "a" * 40)
