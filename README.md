@@ -1,7 +1,7 @@
 # SkillScout
 
-Discover useful AI skills, compare your existing setup, inspect candidates, and approve before installation.
+Find useful agent skills. Compare what you already have. Inspect before installing.
 
-Python CLI and portable Agent Skill. Primary host: OpenAI ChatGPT Work and Codex.
+Python CLI and portable Agent Skill, with OpenAI ChatGPT Work / Codex as the primary host.
+Under development: the first release and installation guide are being built in this repository.
 
-The first release is being built in this repository. Installation and usage instructions will follow with the implementation.
