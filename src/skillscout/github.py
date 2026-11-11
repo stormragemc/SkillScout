@@ -242,10 +242,17 @@ def extract_archive(raw: bytes, destination: Path) -> None:
         raise ScoutError("Invalid or encrypted GitHub archive") from exc
 
 
-def snapshot(store: Store, repo: str, client: GitHub | None = None) -> dict:
+def snapshot(store: Store, repo: str, client: GitHub | None = None, revision: str | None = None) -> dict:
     client = client or GitHub()
     repo = repository(repo)
-    revision = client.revision(repo)
+    if revision is not None:
+        if not re.fullmatch(r"[a-f0-9]{40}", revision):
+            raise ScoutError("Explicit revision must be a full 40-character commit SHA")
+        resolved = client.request("/repos/" + repo + "/commits/" + revision)["sha"]
+        if resolved != revision:
+            raise ScoutError("Revision resolution mismatch")
+    else:
+        revision = client.revision(repo)
     sid = digest([repo.lower(), revision])[:24]
     destination = store.root / "quarantine" / sid
     record_path = store.path("sources", sid)

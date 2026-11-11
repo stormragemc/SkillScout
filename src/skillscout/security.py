@@ -65,7 +65,9 @@ def scan(bundle):
     if not binary:
         return {**base, "status": "unverified", "reason": "SkillSpector is unavailable; installation is blocked"}
     try:
-        _, version = command([binary, "--version"], timeout=30, cap=8000)
+        version_rc, version = command([binary, "--version"], timeout=30, cap=8000)
+        if version_rc or version.strip() != "SkillSpector v2.12.0":
+            raise ScoutError("Unsupported scanner version; use the documented pinned 2.12.0 target")
         with tempfile.TemporaryDirectory(prefix="skillscout-scan-") as d:
             output = Path(d) / "report.json"
             rc, _ = command([binary, "scan", str(bundle.resolve()), "--no-llm", "--fail-on-incomplete",

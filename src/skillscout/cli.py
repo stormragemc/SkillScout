@@ -5,7 +5,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import __version__, config, github, instagram, inventory, media, proposals, schedule
+from . import __version__, config, instagram, inventory, media, proposals, schedule
 from .core import ScoutError, Store, clean
 
 
@@ -19,6 +19,7 @@ def parser():
     pref.add_argument("action", choices=["show", "set"])
     pref.add_argument("--interests", nargs="+")
     pref.add_argument("--target", choices=["codex", "claude", "gemini"])
+    pref.add_argument("--delivery", choices=["local", "work"])
     for key in ("candidates", "posts-per-creator", "model-input-chars", "model-calls"):
         pref.add_argument("--" + key, type=int)
     creators = sub.add_parser("creators")
@@ -35,6 +36,7 @@ def parser():
     inspect = sub.add_parser("inspect")
     inspect.add_argument("repository")
     inspect.add_argument("--skill", help="Relative skill directory containing SKILL.md")
+    inspect.add_argument("--revision", help="Optional full commit SHA")
     rev = sub.add_parser("review")
     rev.add_argument("id")
     rev.add_argument("--decision", choices=["add", "update", "redundant", "conflict", "uncertain"])
@@ -46,6 +48,9 @@ def parser():
     app.add_argument("--fingerprint", required=True)
     for name in ("install", "rollback", "show"):
         sub.add_parser(name).add_argument("id")
+    export = sub.add_parser("export", help="Export approved content for ChatGPT Work installation")
+    export.add_argument("id")
+    export.add_argument("--output", required=True, type=Path)
     sub.add_parser("inbox")
     sub.add_parser("integrations")
     job = sub.add_parser("schedule")
@@ -92,6 +97,8 @@ def execute(a, store):
                 c["interests"] = [clean(i, 100) for i in a.interests[:10]]
             if a.target:
                 c["target"] = a.target
+            if a.delivery:
+                c["delivery"] = a.delivery
             for key, cap in (("candidates", 50), ("posts_per_creator", 20), ("model_input_chars", 32000), ("model_calls", 5)):
                 value = getattr(a, key)
                 if value is not None:
@@ -143,7 +150,7 @@ def execute(a, store):
         c["budgets"]["candidates"] = min(max(1, a.limit), c["budgets"]["candidates"])
         return schedule.run(store, c, a.source, mode=a.rank)
     if a.command == "inspect":
-        return proposals.prepare(store, c, a.repository, a.skill)
+        return proposals.prepare(store, c, a.repository, a.skill, a.revision)
     if a.command == "review":
         if a.model:
             from .reviewer import model_review
@@ -153,6 +160,8 @@ def execute(a, store):
         return proposals.review(store, c, a.id, a.decision, a.reason, a.evidence)
     if a.command == "approve":
         return proposals.approve(store, c, a.id, a.fingerprint)
+    if a.command == "export":
+        return proposals.export_work(store, c, a.id, a.output)
     if a.command == "install":
         return proposals.install(store, c, a.id)
     if a.command == "rollback":

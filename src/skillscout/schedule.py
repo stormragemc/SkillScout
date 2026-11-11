@@ -77,6 +77,11 @@ def run(store, config, source, client=None, mode="best-match"):
         from .proposals import prepare
         from .reviewer import model_review
         candidates = [r for result in results for r in result.get("candidates", [])]
+        # Explicit repository links from creator captions join the same inspection queue.
+        linked = [repo for result in results for post in result.get("new_posts", [])
+                  for repo in post.get("github_candidates", [])]
+        candidates += [{"repository": repo} for repo in dict.fromkeys(linked)]
+        candidates = list({r["repository"].lower(): r for r in candidates}.values())
         known = {p["repository"] for p in store.list("proposals")
                  if p.get("status") not in {"rolled_back", "rejected"}}
         for row in [r for r in candidates if r["repository"] not in known][:config["budgets"]["model_calls"]]:

@@ -2,7 +2,6 @@
 import hashlib
 import json
 import shutil
-from pathlib import Path
 
 from .config import handle
 from .core import ScoutError, clean, digest, now

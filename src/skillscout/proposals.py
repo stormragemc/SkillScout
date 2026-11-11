@@ -2,6 +2,8 @@
 import os
 import shutil
 import tempfile
+import hashlib
+import zipfile
 from pathlib import Path, PurePosixPath
 
 from . import config as preferences
@@ -29,11 +31,11 @@ def subject(store, p):
 def fingerprint(p):
     return digest({k: p[k] for k in (
         "source_id", "revision", "source_hash", "skill_path", "content_hash", "metadata",
-        "license_files", "security", "assessment", "target", "destination", "previous_hash")})
+        "license_files", "security", "assessment", "target", "delivery", "destination", "previous_hash")})
 
 
-def prepare(store, config, repo, skill=None):
-    source = snapshot(store, repo)
+def prepare(store, config, repo, skill=None, revision=None):
+    source = snapshot(store, repo, revision=revision)
     root = store.root / "quarantine" / identifier(source["id"])
     manifests = sorted(p.relative_to(root).as_posix() for p in root.rglob("SKILL.md"))
     if skill is None:
@@ -46,7 +48,8 @@ def prepare(store, config, repo, skill=None):
     metadata = skill_metadata(original / "SKILL.md")
     if original.name != metadata["name"] and skill != ".":
         raise ScoutError("Skill folder must match its declared name")
-    pid = digest([source["id"], skill, config["target"]])[:24]
+    delivery = config.get("delivery", "local")
+    pid = digest([source["id"], skill, config["target"], delivery])[:24]
     if store.path("proposals", pid).exists():
         old = store.load("proposals", pid)
         if old["status"] == "installed":
@@ -67,12 +70,13 @@ def prepare(store, config, repo, skill=None):
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(src.read_bytes())
     target = config["target"]
-    destination = preferences.default_skill_root(target) / metadata["name"]
+    destination = preferences.default_skill_root(target) / metadata["name"] if delivery == "local" else None
     p.update(at=now(), repository=source["repository"], revision=source["revision"],
              source_hash=source["content_hash"], content_hash=tree_hash(bundle),
              license_files=license_paths, security={"source": scan(root), "bundle": scan(bundle)},
-             assessment=assess(metadata, collect(config)), target=target,
-             destination=str(destination), previous_hash=tree_hash(destination) if destination.exists() else None,
+             assessment=assess(metadata, collect(config)), target=target, delivery=delivery,
+             destination=str(destination) if destination else "ChatGPT Work supported skill installer",
+             previous_hash=tree_hash(destination) if destination and destination.exists() else None,
              status="pending_review")
     p["fingerprint"] = fingerprint(p)
     store.save("proposals", pid, p)
@@ -113,11 +117,16 @@ def validate(store, config, p):
         raise ScoutError("Existing setup changed; reassess")
     if p["target"] != config["target"]:
         raise ScoutError("Target agent changed")
-    dest = preferences.default_skill_root(p["target"]) / p["metadata"]["name"]
-    if p["destination"] != str(dest):
-        raise ScoutError("Unexpected destination")
-    if (tree_hash(dest) if dest.exists() else None) != p["previous_hash"]:
-        raise ScoutError("Destination changed; preserve customizations and prepare again")
+    if p["delivery"] != config.get("delivery", "local"):
+        raise ScoutError("Delivery method changed; prepare a new proposal")
+    if p["delivery"] == "local":
+        dest = preferences.default_skill_root(p["target"]) / p["metadata"]["name"]
+        if p["destination"] != str(dest):
+            raise ScoutError("Unexpected destination")
+        if (tree_hash(dest) if dest.exists() else None) != p["previous_hash"]:
+            raise ScoutError("Destination changed; preserve customizations and prepare again")
+    elif p["delivery"] != "work" or p["destination"] != "ChatGPT Work supported skill installer":
+        raise ScoutError("Unsupported delivery method")
     if not p["license_files"]:
         raise ScoutError("No upstream license found; automatic copying is unsupported")
     return bundle
@@ -138,6 +147,8 @@ def install(store, config, pid):
         p = store.load("proposals", pid)
         if p["status"] != "approved" or p.get("approval", {}).get("fingerprint") != p["fingerprint"]:
             raise ScoutError("Explicit approval of this exact proposal is required")
+        if p["delivery"] != "local":
+            raise ScoutError("This proposal targets ChatGPT Work; export the approved package and use its supported installer")
         bundle = validate(store, config, p)
         dest = Path(p["destination"])
         if any(a.is_symlink() for a in [dest, *dest.parents]):
@@ -201,3 +212,36 @@ def rollback(store, pid):
         store.save("proposals", pid, p)
         store.path("installed", p["metadata"]["name"]).unlink(missing_ok=True)
         return p
+
+
+def export_work(store, config, pid, output):
+    """Export approved exact bytes; do not claim to register a cloud skill."""
+    with store.lock("installation"):
+        p = store.load("proposals", pid)
+        if (p["delivery"] != "work" or p["status"] not in {"approved", "exported"}
+                or p.get("approval", {}).get("fingerprint") != p["fingerprint"]):
+            raise ScoutError("Explicit approval of a Work-delivery proposal is required")
+        bundle = validate(store, config, p)
+        output = Path(output).expanduser().absolute()
+        if output.suffix != ".zip" or output.exists() or any(a.is_symlink() for a in [output, *output.parents]):
+            raise ScoutError("Choose a new non-linked .zip output path")
+        if output.is_relative_to(store.root.absolute()):
+            raise ScoutError("Export outside private state to avoid mixing evidence with deliverables")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fd, temp = tempfile.mkstemp(dir=output.parent, suffix=".zip")
+        os.close(fd)
+        try:
+            with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED) as z:
+                for path in sorted(bundle.rglob("*")):
+                    if path.is_file():
+                        z.write(path, p["metadata"]["name"] + "/" + path.relative_to(bundle).as_posix())
+            if tree_hash(bundle) != p["content_hash"]:
+                raise ScoutError("Bundle changed during export")
+            os.replace(temp, output)
+        finally:
+            Path(temp).unlink(missing_ok=True)
+        p.update(status="exported", exported_at=now(),
+                 export_sha256=hashlib.sha256(output.read_bytes()).hexdigest())
+        store.save("proposals", pid, p)
+        return {"proposal_id": pid, "path": str(output), "sha256": p["export_sha256"],
+                "installed": False, "next": "Use ChatGPT Work's supported skill installer. This export is not account installation."}
