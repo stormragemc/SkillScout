@@ -42,3 +42,27 @@ class DiscoveryTests(unittest.TestCase):
         scores = bm25("audio measurement", ["audio measurements and audio measurement", "restaurant bookings"])
         self.assertGreater(scores[0], scores[1])
 
+
+
+    def test_explicit_revision_is_resolved_and_acquired_without_head(self):
+        from skillscout.core import Store
+        from skillscout.github import snapshot
+        sha = "a" * 40
+        raw = io.BytesIO()
+        with zipfile.ZipFile(raw, "w") as archive:
+            archive.writestr("repository/SKILL.md", "pinned content")
+        class Client:
+            def revision(self, repo):
+                raise AssertionError("Explicit revision must not fall back to HEAD")
+            def request(self, path, **kwargs):
+                if path == "/repos/owner/repo/commits/" + sha:
+                    return {"sha": sha}
+                if path == "/repos/owner/repo/zipball/" + sha:
+                    return raw.getvalue()
+                raise AssertionError(path)
+        with tempfile.TemporaryDirectory() as d:
+            result = snapshot(Store(d), "owner/repo", Client(), revision=sha)
+            self.assertEqual(result["revision"], sha)
+            self.assertEqual((Path(result["path"]) / "SKILL.md").read_text(), "pinned content")
+            with self.assertRaises(ScoutError):
+                snapshot(Store(d), "owner/repo", Client(), revision="main")
