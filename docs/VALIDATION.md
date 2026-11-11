@@ -38,3 +38,16 @@ A successful fixture is not a security certification for SkillScout or any candi
 
 These require the installing user's explicit setup. The maintainer's first-user
 walkthrough is intentionally separate from developer fixtures.
+
+## Recorded release-candidate check
+
+[Run 42985904656](https://github.com/stormragemc/SkillScout/actions/runs/42985904656)
+checked commit 4b845c6b49771f52507e86cff95151179bbe6943:
+
+- 31 core tests passed on Ubuntu and Windows with Python 3.11 and 3.12.
+- Two real SkillSpector tests passed in the separate integration job.
+- The extracted portable runtime and Python package builds passed.
+- Public GitHub metadata, commit resolution and historical star data returned successfully.
+- No user accounts, Instagram sessions, persistent skill installs or paid model calls were activated.
+
+Subsequent changes and their checks remain visible in the Actions history.

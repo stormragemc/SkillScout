@@ -25,6 +25,7 @@ Pass source text as separate argv values; do not interpolate it into shell code.
 | Configured model review | `skillscout review ID --model` |
 | Exact approval | `skillscout approve ID --fingerprint FINGERPRINT` |
 | Install approved content | `skillscout install ID` |
+| Work handoff | `skillscout export ID --output PATH.zip` |
 | Rollback | `skillscout rollback ID` |
 | Inbox | `skillscout inbox` |
 | Media evidence | `skillscout media VIDEO --source REEL-URL --transcript FILE --frames --audio` |

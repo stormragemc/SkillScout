@@ -7,6 +7,11 @@ then run `python scripts/build_bundle.py`. The ZIP contains a single skillscout
 folder with SKILL.md, references and scripts/runtime. Install through your host's
 supported skill workflow: https://learn.chatgpt.com/docs/build-skills.
 
+For subsequent candidate skills, set `preferences set --delivery work` before
+inspection. After exact approval use `export ID --output ./approved-skill.zip`,
+then Work's supported installer. Exporting does not install. Cloud versioning
+and rollback belong to that host; CLI rollback applies only to local installs.
+
 This is not an OAuth connector or hosted MCP service. Running a CLI on another
 machine does not expose tools to this chat. Skill upload/GitHub import controls
 can vary by host and workspace permissions. Plain chat cannot run the runtime.

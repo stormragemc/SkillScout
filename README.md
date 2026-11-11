@@ -6,6 +6,8 @@ SkillScout discovers AI coding and design skills on GitHub and in educational
 reels from selected creators. It compares candidates with your existing setup,
 inspects the exact package, and prepares a proposal. You decide what to install.
 
+[![CI](https://github.com/stormragemc/SkillScout/actions/workflows/ci.yml/badge.svg)](https://github.com/stormragemc/SkillScout/actions/workflows/ci.yml)
+
 Built by [stormragemc](https://github.com/stormragemc). **OpenAI ChatGPT Work and
 Codex first.** Python 3.11+ · MIT · v0.1.0
 
@@ -69,6 +71,12 @@ This creates **dist/skillscout.zip**: the skill, references and a self-contained
 Python runtime. Building does not install it. Use your host's supported skill
 installation workflow. The repository's [CI runs](https://github.com/stormragemc/SkillScout/actions/workflows/ci.yml)
 also produce a portable bundle artifact once package checks pass.
+
+For later candidate installations in Work, select its handoff mode after setup:
+
+```sh
+skillscout preferences set --delivery work
+```
 
 Then ask:
 
@@ -194,6 +202,8 @@ If several skills are found, choose the relative folder shown in the result:
 skillscout inspect OWNER/REPOSITORY --skill skills/SKILL-NAME
 ```
 
+Select an explicit full commit with `--revision COMMIT-SHA` when needed.
+
 The proposal records its ID, pinned revision, scanner results, context estimates
 and existing-setup comparison. A tool-only repository receives manual integration
 guidance; SkillScout does not run its installer.
@@ -221,6 +231,16 @@ Review the proposed changes. After you explicitly approve that exact proposal:
 skillscout approve PROPOSAL-ID --fingerprint EXACT-FINGERPRINT
 skillscout install PROPOSAL-ID
 ```
+
+For **ChatGPT Work**, export the approved proposal instead of using the local installer:
+
+```sh
+skillscout export PROPOSAL-ID --output ./approved-skill.zip
+```
+
+Use Work's supported installation flow for that ZIP. Exporting is not account
+installation. Cloud updates/rollback use the host's versioning; CLI rollback
+applies to local folder installations.
 
 Changed content, inventory or destination invalidates approval. Security checks
 must still be eligible. Every update requires a fresh inspected proposal.
